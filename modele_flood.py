@@ -120,6 +120,13 @@ class Modele:
         self.__score=0
         self.__mat=[[Case(j,i,(random.randint(1,self.__couleurs)),False,self) for i in range(self.__col)] for j in range(self.__lig)]
         self.__depart=deepcopy(self.__mat)
+
+    def reinit_partielle(self)->int:
+        self.change_etat_voisines(0,0)
+        for l in range(self.nb_lig()):
+            for c in range(self.nb_col()):
+                if self.__mat[l][c].etat()==False:
+                    self.__mat[l][c]=Case(l,c,(random.randint(1,self.__couleurs)),False,self)
     
     def affiche_ligne_traits(self) -> str: 
         '''affiche une ligne de ’-’ de la bonne dimension'''
