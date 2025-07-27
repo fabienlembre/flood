@@ -51,6 +51,8 @@ class Modele:
         self.__couleurs=couleurs
         self.__score=0
         self.__mat=[[Case(j,i,(random.randint(1,couleurs)),False,self) for i in range(col)] for j in range(lig)]
+        self.__depart=deepcopy(self.__mat)
+        self.__pile=Pile()
     
     #accesseurs
     def nb_lig(self)-> int:
@@ -63,6 +65,9 @@ class Modele:
         return self.__mat
     def score(self)-> int:
         return self.__score
+    def pile(self):
+        return self.__pile
+
     
     def couleur(self,l : int,c : int) -> int:
         '''renvoie la couleur d'un carré'''
@@ -82,6 +87,7 @@ class Modele:
         if self.__mat[0][0].couleur()!=self.couleur(l,c):
             self.__mat[0][0].change_couleur(self.couleur(l,c))
             self.__score+=1
+            self.__pile.empiler((l,c))
 
     def choisit_couleur_2(self,couleur:int)-> None:
         '''POUR ETAPE 3 : Met le premier carré (0,0) à la couleur choisi (l,c) et augmente le score
@@ -113,6 +119,7 @@ class Modele:
         '''Met le score à 0 et reinitialise aléatoirement les valeurs de la matrice'''
         self.__score=0
         self.__mat=[[Case(j,i,(random.randint(1,self.__couleurs)),False,self) for i in range(self.__col)] for j in range(self.__lig)]
+        self.__depart=deepcopy(self.__mat)
     
     def affiche_ligne_traits(self) -> str: 
         '''affiche une ligne de ’-’ de la bonne dimension'''
@@ -158,8 +165,8 @@ class Modele:
         return True
     
     def nb_coups_max(self)-> int:
-        liste_compteur=[]
-        for i in range(100):
+        liste_compteur=[float('inf')]
+        for i in range(400):
             copie=deepcopy(self) #on crée la copie du Modele
             '''Pour le premier tour, on fait en sorte de prendre une couleur qui est dans les 2 cases collées du coin droit pour améliorer un peu la précision'''
             liste=[]
@@ -174,8 +181,9 @@ class Modele:
                     couleur=random.choice(liste) # sinon on rechoisi aléatoirement une couleur dans la liste tant que la couleur est la même que celle du coin
             copie.choisit_couleur_2(couleur)
             copie.pose_couleur(couleur)
+            mini=liste_compteur[-1]
             compteur=1 #on initialise le compteur à 1 (premier tour effectué)
-            while copie.partie_fini()==False :
+            while copie.partie_fini()==False and compteur<mini:
                 copie.change_etat_voisines(0,0)
                 couleur=random.randint(1,copie.nb_couleurs())
                 while couleur==copie.mat()[0][0].couleur():
@@ -184,39 +192,63 @@ class Modele:
                 copie.pose_couleur(couleur)
                 compteur+=1
             liste_compteur.append(compteur)
-        return min(liste_compteur)
-
+        return liste_compteur[-1]
+    
     def jouer(self,l,c)->None:
         self.change_etat_voisines(0,0)
         self.choisit_couleur(l,c)
         self.pose_couleur(self.couleur(0,0))
 
-    def reinit_partielle(self)->int:
-        self.change_etat_voisines(0,0)
-        for l in range(self.nb_lig()):
-            for c in range(self.nb_col()):
-                if self.__mat[l][c].etat()==False:
-                    self.__mat[l][c]=Case(l,c,(random.randint(1,self.__couleurs)),False,self)
-           
+    def undo(self)->None:
+        self.__score=0
+        self.__pile.depiler()
+        p=Pile()
+        while not self.__pile.est_vide():
+            p.empiler(self.__pile.depiler())
+        self.__mat=deepcopy(self.__depart)
+        if __name__== "__main__":
+            while not p.est_vide():
+                etape=p.depiler()
+                self.change_etat_voisines(0,0)
+                self.choisit_couleur(etape[0],etape[1])
+                self.pose_couleur(self.couleur(0,0))
+        return p
+
+class Pile:
+    def __init__(self):
+        self.__les_elem=[]
+        
+    def empiler(self,elt):
+        self.__les_elem.append(elt)
+        
+    def est_vide(self):
+        return len(self.__les_elem) ==0
+    
+    def sommet(self):
+        assert not self.est_vide()
+        return self.__les_elem[-1]
+    
+    def depiler(self):
+        assert not self.est_vide()
+        elt=self.__les_elem[-1]
+        del(self.__les_elem[-1])
+        return elt
+    
+    
 '''Tests'''
 if __name__== "__main__":
-    #étape 1
     mod = Modele()
-    '''print(mod.nb_lig())
-    print(mod.nb_col())
-    print(mod.nb_couleurs())
-    print(mod)
-    print(mod.couleur(0,9))
-    print(mod.couleur(0,0))
-    mod.choisit_couleur(0,9)
-    print(mod.couleur(0,0))'''
-    #etape 3
-    '''mod = Modele()
-    print(mod)
-    print(mod.nb_coups_max())'''
+    '''print(mod)
     mod.jouer(5,5)
+    print(mod)
+    mod.jouer(10,10)
+    print(mod)
     mod.jouer(6,6)
+    print(mod)
+    mod.undo()
+    print(mod)
     mod.jouer(7,7)
     print(mod)
-    mod.reinit_partielle()
-    print(mod)
+    mod.undo()
+    print(mod)'''
+    print(mod.nb_coups_max())
